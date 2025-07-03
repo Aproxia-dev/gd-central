@@ -1,0 +1,68 @@
+services:
+  backend:
+    build:
+      context: ./backend/
+      dockerfile: ./Dockerfile
+    depends_on:
+      - db
+    environment:
+      APP_ENV: prod
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+      PGHOST: ${PGHOST}
+      PGPORT: 5432
+      PGSSLMODE: ${PGSSLMODE}
+    ports:
+      - "8000:8000"
+    command: >
+      ./main
+    profiles: ["prod"]
+
+  backend-dev:
+    build:
+      context: ./backend/
+      dockerfile: ./Dockerfile
+    depends_on:
+      - db
+    environment:
+      APP_ENV: dev
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+      PGHOST: ${PGHOST}
+      PGPORT: 5432
+      PGSSLMODE: ${PGSSLMODE}
+    ports:
+      - "8080:8000"
+    command: >
+      ./main
+    profiles: ["dev"]
+
+  db:
+    image: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: unless-stopped
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+volumes:
+  pg-data:
+  pgadmin-data:

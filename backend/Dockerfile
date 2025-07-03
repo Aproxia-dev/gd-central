@@ -1,3 +1,4 @@
+# --- Build Stage ---
 FROM golang:1.24.4 AS builder
 
 WORKDIR /app
@@ -7,12 +8,13 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o main .
+RUN go build -o gdcentral ./cmd/gdcentral
 
+# --- Run Stage ---
 FROM debian:bookworm-slim
 
 WORKDIR /app
 
-COPY --from=builder /app/main .
+COPY --from=builder /app/gdcentral .
 
-CMD ["./main"]
+CMD ["./gdcentral"]

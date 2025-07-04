@@ -8,11 +8,15 @@ import (
 )
 
 func GetProviders() {
+	dcb := "http://localhost:8080/auth/discord/callback"
+	if os.Getenv("APP_ENV") == "prod" {
+		dcb = "something else lmao"
+	}
 	goth.UseProviders(
 		discord.New(
 			os.Getenv("DISCORD_KEY"),
 			os.Getenv("DISCORD_SECRET"),
-			"http://localhost:8000/auth/discord/callback",
+			dcb,
 			discord.ScopeIdentify,
 		),
 	)

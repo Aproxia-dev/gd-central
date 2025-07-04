@@ -3,6 +3,7 @@ module github.com/Aproxia-dev/gd-central/backend
 go 1.24.4
 
 require (
+	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/markbates/goth v1.81.0

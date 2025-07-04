@@ -1,22 +1,16 @@
-package main
+package db
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5"
-	// "github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-type User struct {
-	gorm.Model
-	Username string `gorm:"uniqueIndex"`
-	Email    string `gorm:"uniqueIndex"`
-}
 
 func getEnvOrErr(key string) string {
 	value := os.Getenv(key)
@@ -26,7 +20,7 @@ func getEnvOrErr(key string) string {
 	return value
 }
 
-func createDatabase(user string, password string, host string, port string, dbname string, sslmode string) {
+func createDatabase(user string, password string, host string, port string, dbname string, sslmode string) error {
 	adminUrl := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/postgres?sslmode=%s",
 		user, password, host, port, sslmode,
@@ -43,20 +37,54 @@ func createDatabase(user string, password string, host string, port string, dbna
 	err = adminConn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 from pg_database WHERE datname = $1)", dbname).Scan(&exists)
 	if err != nil {
 		log.Fatalf("Failed to check database existence: %v", err)
+		return err
 	}
 
 	if !exists {
 		_, err = adminConn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %s", dbname))
 		if err != nil {
 			log.Fatalf("Failed to create database: %v", err)
+			return err
 		}
 		fmt.Printf("Database %s created successfully!\n", dbname)
 	} else {
 		fmt.Printf("Database %s already exists!\n", dbname)
 	}
+	return nil
 }
 
-func main() {
+func Connect(dsn string) (*gorm.DB, error) {
+	var DB *gorm.DB
+	var err error
+
+	for attempts := 1; attempts <= 3; attempts++ {
+		DB, err = gorm.Open(postgres.New(postgres.Config{
+			DSN:                  dsn,
+			PreferSimpleProtocol: true,
+		}), &gorm.Config{})
+
+		if err == nil {
+			log.Printf("Successfully connected to DB!")
+			return DB, err
+		}
+
+		log.Printf("Failed to connect to database (attempt %d/3): %v", attempts, err)
+		time.Sleep(3 * time.Second)
+	}
+	return DB, fmt.Errorf("Failed to connect to DB after 3 attempts: %w", err)
+}
+
+func AutoMigrate(DB *gorm.DB) {
+	err := DB.AutoMigrate(&User{}, &GDUser{}, &Level{}, &Completion{}, &Token{})
+	if err != nil {
+		log.Fatalf("Failed to auto-migrate: %v", err)
+	}
+
+	log.Printf("Successfully migrated tables!")
+
+}
+
+func InitDB() *gorm.DB {
 	// err := godotenv.Load()
 	// if err != nil {
 	// 	log.Println("couldn't find .env file! using system variables instead")
@@ -73,28 +101,24 @@ func main() {
 		sslmode = "disable"
 	}
 
-	if appEnv == "dev" {
-		createDatabase(user, password, host, port, dbname, sslmode)
-	}
-
-	dsn := fmt.Sprintf(
+	DSN := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		user, password, host, port, dbname, sslmode,
 	)
 
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN:                  dsn,
-		PreferSimpleProtocol: true,
-	}), &gorm.Config{})
-
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+	if appEnv == "dev" {
+		for attempts := 1; attempts <= 3; attempts++ {
+			err := createDatabase(user, password, host, port, dbname, sslmode)
+			if err == nil {
+				break
+			}
+			log.Printf("DB creation failed (attempt %d/3): %v", attempts, err)
+			time.Sleep(3 * time.Second)
+		}
 	}
 
-	err = db.AutoMigrate(&User{})
-	if err != nil {
-		log.Fatalf("Failed to auto-migrate: %v", err)
-	}
+	DB, _ := Connect(DSN)
+	AutoMigrate(DB)
 
-	fmt.Println("Successfully connected to database and migrated User table!")
+	return DB
 }

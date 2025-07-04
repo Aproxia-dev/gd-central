@@ -1,30 +1,34 @@
 package oauth
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/markbates/goth/gothic"
 )
 
-func DiscordAuthRedirect(c *fiber.Ctx) error {
-	c.Request().Header.Set("Provider", "discord")
-	r := c.Context().Request()
-	w := fiberToResponseWriter{c}
+func DiscordAuthRedirect(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	q.Set("provider", "discord")
+	r.URL.RawQuery = q.Encode()
 	gothic.BeginAuthHandler(w, r)
-	return nil
 }
 
-func DiscordAuthCallback(c *fiber.Ctx) error {
-	c.Request().Header.Set("Provider", "discord")
-	r := c.Context().Request()
-	w := fiberToResponseWriter{c}
+func DiscordAuthCallback(w http.ResponseWriter, r *http.Request) {
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).SendString(fmt.Sprintf("Auth failed: %v", err))
+		http.Error(w, fmt.Sprintf("Auth failed: %v", err), http.StatusUnauthorized)
+		return
 	}
-	c.JSON(user)
+	userJson, _ := json.MarshalIndent(user, "", "  ")
+	log.Println(string(userJson))
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
 }
 
 // Adapter to make Fiber compatible with http.ResponseWriter

@@ -12,7 +12,7 @@ import (
 type User struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	Name        string
-	DiscordName string
+	DiscordTag  string
 	DiscordID   string `gorm:"uniqueIndex"`
 	GDUserID    *int32
 	GDUser      *GDUser      `gorm:"foreignKey:GDUserID;references:ID"`

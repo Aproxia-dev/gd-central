@@ -29,20 +29,22 @@ func DiscordAuthCallback(w http.ResponseWriter, r *http.Request) {
 	var user db.User
 	result := db.DB.Where("discord_id = ?", OauthUser.UserID).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		user := db.User{
-			DiscordID:   OauthUser.UserID,
-			Name:        OauthUser.RawData["global_name"].(string),
-			DiscordName: OauthUser.Name,
+		user = db.User{
+			DiscordID:  OauthUser.UserID,
+			Name:       OauthUser.RawData["global_name"].(string),
+			DiscordTag: OauthUser.Name,
 		}
 		db.DB.Create(&user)
 	} else if result.Error != nil {
 		log.Fatalf("DB Error: %v", result.Error)
 		http.Error(w, "Internal Server Error!", http.StatusInternalServerError)
 		return
+	} else {
+		db.DB.Model(&user).Update("name", OauthUser.RawData["global_name"].(string)).Update("DiscordTag", OauthUser.Name)
 	}
 
 	response := fmt.Sprintf(`{"User": {"ID": "%s", "Name": "%s", "Tag": "%s"}}`,
-		user.DiscordID, user.DiscordName, user.Name)
+		user.DiscordID, user.DiscordTag, user.Name)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

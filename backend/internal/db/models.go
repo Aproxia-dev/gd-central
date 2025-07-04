@@ -11,7 +11,9 @@ import (
 
 type User struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
-	DiscordID   string    `gorm:"uniqueIndex"`
+	Name        string
+	DiscordName string
+	DiscordID   string `gorm:"uniqueIndex"`
 	GDUserID    *int32
 	GDUser      *GDUser      `gorm:"foreignKey:GDUserID;references:ID"`
 	Completions []Completion `gorm:"foreignKey:Victor"`
@@ -21,7 +23,7 @@ type User struct {
 }
 
 type GDUser struct {
-	ID            int32 `gorm:"primaryKey;uniqueIndex"`
+	ID            int64 `gorm:"primaryKey;uniqueIndex"`
 	Name          string
 	CreatedLevels []Level `gorm:"foreignKey:CreatedByID"`
 	Stars         int32
@@ -33,26 +35,27 @@ type GDUser struct {
 }
 
 type Level struct {
-	ID              int32 `gorm:"primaryKey;uniqueIndex"`
+	ID              uint64 `gorm:"primaryKey;uniqueIndex"`
 	Name            string
 	Description     string
 	CreatedBy       GDUser       `gorm:"foreignKey:CreatedByID;references:ID"`
-	CreatedByID     int32        `gorm:"index"`
+	CreatedByID     uint64       `gorm:"index"`
 	Completions     []Completion `gorm:"foreignKey:LevelID"`
-	Downloads       int32
-	Likes           int32
-	Version         int32
-	Length          int32
+	Downloads       uint64
+	Likes           int64
+	Version         uint16
+	Length          LevelLength
 	FeatureScore    int32
 	Rated           GDRated
 	Difficulty      GDDifficulty
 	DemonDifficulty GDDemonDifficulty
-	Coins           int32
+	Coins           uint8
 	VerifiedCoins   bool
-	GDDLRating      *int32
-	GDDLEnjoyment   *int32
-	AREDLPlacement  *int32
-	DLPlacement     *int32
+	GDDLRating      *uint8
+	GDDLEnjoyment   *uint8
+	DLPlacement     *uint32
+	AREDLPlacement  *uint32
+	IDLPlacement    *uint32
 	NLWTier         *NLWTier
 	IDSTier         *IDSTier
 	GDDPTier        *GDDPTier
@@ -64,11 +67,11 @@ type Completion struct {
 	LevelID                int32     `gorm:"index"`
 	Level                  Level     `gorm:"foreignKey:LevelID;references:ID"`
 	Verified               bool
-	CheckedBy              *uuid.UUID
-	CheckedByUser          *User `gorm:"foreignKey:CheckedBy;references:ID"`
+	ReviewedBy             *uuid.UUID
+	ReviewedByUser         *User `gorm:"foreignKey:ReviewedBy;references:ID"`
 	Proof                  string
-	SubmittedGDDLRating    *int32
-	SubmittedGDDLEnjoyment *int32
+	SubmittedGDDLRating    *uint8
+	SubmittedGDDLEnjoyment *uint8
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 }
@@ -156,12 +159,7 @@ func (s *IconSet) Scan(value any) error {
 }
 
 // ===== LEVEL ENUMS =====
-type GDDifficulty int8
-type GDDemonDifficulty int8
-type GDRated int8
-type NLWTier int8
-type IDSTier int8
-type GDDPTier int8
+type GDDifficulty uint8
 
 const (
 	GDUnknownDiff GDDifficulty = iota
@@ -171,72 +169,6 @@ const (
 	GDHard
 	GDHarder
 	GDInsane
-)
-
-const (
-	GDNonDemon GDDemonDifficulty = iota
-	GDEasyDemon
-	GDMediumDemon
-	GDHardDemon
-	GDInsaneDemon
-	GDExtremeDemon
-)
-
-const (
-	GDUnknownRate GDRated = iota
-	GDUnrated
-	GDFeatured
-	GDEpic
-	GDLegendary
-	GDMythic
-)
-
-const (
-	NLWNone NLWTier = iota
-	NLWFuck
-	NLWBeginner
-	NLWEasy
-	NLWMedium
-	NLWHard
-	NLWVeryHard
-	NLWInsane
-	NLWExtreme
-	NLWRemorseless
-	NLWRelentless
-	NLWTerrifying
-)
-
-const (
-	IDSNone IDSTier = iota
-	IDSFuck
-	IDSSuperBeginner
-	IDSBeginner
-	IDSEasy
-	IDSMedium
-	IDSHard
-	IDSVeryHard
-	IDSInsane
-	IDSExtreme
-)
-
-const (
-	GDDPNone GDDPTier = iota
-	GDDPBeginner
-	GDDPBronze
-	GDDPSilver
-	GDDPGold
-	GDDPAmber
-	GDDPPlatinum
-	GDDPSapphire
-	GDDPJade
-	GDDPEmerald
-	GDDPRuby
-	GDDPDiamond
-	GDDPPearl
-	GDDPOnyx
-	GDDPAmethyst
-	GDDPAzurite
-	GDDPObsidian
 )
 
 func (d GDDifficulty) String() string {
@@ -259,6 +191,17 @@ func (d GDDifficulty) String() string {
 	return "Unknown"
 }
 
+type GDDemonDifficulty uint8
+
+const (
+	GDNonDemon GDDemonDifficulty = iota
+	GDEasyDemon
+	GDMediumDemon
+	GDHardDemon
+	GDInsaneDemon
+	GDExtremeDemon
+)
+
 func (d GDDemonDifficulty) String() string {
 	switch d {
 	case GDNonDemon:
@@ -277,10 +220,46 @@ func (d GDDemonDifficulty) String() string {
 	return "Unknown"
 }
 
+type LevelLength uint8
+
+const (
+	LengthUnknown LevelLength = iota
+	LengthTiny
+	LengthShort
+	LengthMedium
+	LengthLong
+	LengthXL
+)
+
+func (l LevelLength) String() string {
+	switch l {
+	case LengthTiny:
+		return "Tiny"
+	case LengthShort:
+		return "Short"
+	case LengthMedium:
+		return "Medium"
+	case LengthLong:
+		return "Long"
+	case LengthXL:
+		return "XL"
+	}
+	return "Unknown"
+}
+
+type GDRated uint8
+
+const (
+	GDUnknownRate GDRated = iota
+	GDUnrated
+	GDFeatured
+	GDEpic
+	GDLegendary
+	GDMythic
+)
+
 func (r GDRated) String() string {
 	switch r {
-	case GDUnknownRate:
-		return "Unknown"
 	case GDUnrated:
 		return "Unrated"
 	case GDFeatured:
@@ -294,6 +273,23 @@ func (r GDRated) String() string {
 	}
 	return "Unknown"
 }
+
+type NLWTier uint8
+
+const (
+	NLWNone NLWTier = iota
+	NLWFuck
+	NLWBeginner
+	NLWEasy
+	NLWMedium
+	NLWHard
+	NLWVeryHard
+	NLWInsane
+	NLWExtreme
+	NLWRemorseless
+	NLWRelentless
+	NLWTerrifying
+)
 
 func (t NLWTier) String() string {
 	switch t {
@@ -325,6 +321,23 @@ func (t NLWTier) String() string {
 	return "Unknown"
 }
 
+type IDSTier uint8
+
+const (
+	IDSNone IDSTier = iota
+	IDSFuck
+	IDSSuperBeginner
+	IDSBeginner
+	IDSEasy
+	IDSMedium
+	IDSHard
+	IDSVeryHard
+	IDSInsane
+	IDSExtreme
+)
+
+type GDDPTier uint8
+
 func (t IDSTier) String() string {
 	switch t {
 	case IDSNone:
@@ -350,6 +363,26 @@ func (t IDSTier) String() string {
 	}
 	return "Unknown"
 }
+
+const (
+	GDDPNone GDDPTier = iota
+	GDDPBeginner
+	GDDPBronze
+	GDDPSilver
+	GDDPGold
+	GDDPAmber
+	GDDPPlatinum
+	GDDPSapphire
+	GDDPJade
+	GDDPEmerald
+	GDDPRuby
+	GDDPDiamond
+	GDDPPearl
+	GDDPOnyx
+	GDDPAmethyst
+	GDDPAzurite
+	GDDPObsidian
+)
 
 func (t GDDPTier) String() string {
 	switch t {

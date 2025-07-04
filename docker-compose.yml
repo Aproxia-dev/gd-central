@@ -13,10 +13,12 @@ services:
       PGHOST: ${PGHOST}
       PGPORT: 5432
       PGSSLMODE: ${PGSSLMODE}
+      DISCORD_KEY: ${DISCORD_KEY}
+      DISCORD_SECRET: ${DISCORD_SECRET}
     ports:
       - "8000:8000"
     command: >
-      ./main
+      ./gdcentral
     profiles: ["prod"]
 
   backend-dev:
@@ -33,10 +35,12 @@ services:
       PGHOST: ${PGHOST}
       PGPORT: 5432
       PGSSLMODE: ${PGSSLMODE}
+      DISCORD_KEY: ${DISCORD_KEY}
+      DISCORD_SECRET: ${DISCORD_SECRET}
     ports:
       - "8080:8000"
     command: >
-      ./main
+      ./gdcentral
     profiles: ["dev"]
 
   db:
@@ -50,6 +54,7 @@ services:
       - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
 
   pgadmin:
     image: dpage/pgadmin4

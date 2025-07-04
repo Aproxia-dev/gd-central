@@ -81,10 +81,12 @@ func AutoMigrate(DB *gorm.DB) {
 	}
 
 	log.Printf("Successfully migrated tables!")
-
 }
 
-func InitDB() *gorm.DB {
+var DB *gorm.DB
+var DSN string
+
+func InitDB() error {
 	// err := godotenv.Load()
 	// if err != nil {
 	// 	log.Println("couldn't find .env file! using system variables instead")
@@ -101,7 +103,7 @@ func InitDB() *gorm.DB {
 		sslmode = "disable"
 	}
 
-	DSN := fmt.Sprintf(
+	DSN = fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		user, password, host, port, dbname, sslmode,
 	)
@@ -117,8 +119,12 @@ func InitDB() *gorm.DB {
 		}
 	}
 
-	DB, _ := Connect(DSN)
-	AutoMigrate(DB)
+	var err error
+	DB, err = Connect(DSN)
+	if err != nil {
+		return err
+	}
 
-	return DB
+	AutoMigrate(DB)
+	return nil
 }

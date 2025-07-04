@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"crypto/tls"
@@ -17,8 +18,11 @@ func main() {
 	if os.Getenv("APP_ENV") == "dev" {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+	err := db.InitDB()
+	if err != nil {
+		log.Fatal(err)
+	}
 	oauth.GetProviders()
-	db.InitDB()
 	app := fiber.New()
 	api.RegisterRoutes(app)
 	app.Listen(":8000")

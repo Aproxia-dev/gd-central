@@ -18,8 +18,39 @@ type User struct {
 	GDUser      *GDUser      `gorm:"foreignKey:GDUserID;references:ID"`
 	Completions []Completion `gorm:"foreignKey:Victor"`
 	Tokens      []Token      `gorm:"foreignKey:UserID"`
+	Usage       []UsageLog   `gorm:"foreignKey:UserID"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+type Developer struct {
+	ID         uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	Email      string    `gorm:"unique"`
+	Password   string
+	Restricted bool     `gorm:"default:false"`
+	Keys       []APIKey `gorm:"foreignKey:OwnerID"`
+}
+
+type APIKey struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
+	OwnerID   uuid.UUID
+	Name      string     `gorm:"index"`
+	Key       string     `gorm:"unique"`
+	Active    bool       `gorm:"default:true"`
+	Usage     []UsageLog `gorm:"foreignKey:APIKeyID"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type UsageLog struct {
+	APIKeyID  uuid.UUID
+	UserID    uuid.UUID
+	Path      string
+	Method    string
+	Status    int
+	Latency   int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type GDUser struct {
